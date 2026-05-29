@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planner · ปฏิทินครอบครัวและงานส่วนตัว</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ====================== ตั้งค่า: ใส่ URL ของ Apps Script ที่นี่ ======================
+   วิธีหา URL อยู่ในไฟล์ README — เมื่อใส่แล้วทุกคนที่เปิดลิงก์เว็บจะเห็นข้อมูลชุดเดียวกัน
+   ถ้าเว้นว่างไว้ เว็บจะให้ใส่ URL ผ่านหน้าตั้งค่าแทน (เก็บไว้ในเครื่องตัวเอง)        */
+
+:root{
+  --paper:#f3efe4; --surface:#fbf9f2; --surface-2:#f6f2e7;
+  --ink:#2a2620; --ink-soft:#6f6657; --ink-faint:#a59c8c;
+  --line:#e6dfcd; --line-strong:#d8cfb8;
+  --accent:#1f6f5c; --accent-d:#185444; --accent-soft:#dce9e2;
+  --warm:#c8702c; --warm-soft:#f3e3d2;
+  --work:#3a6db0; --personal:#c8702c; --family:#6d9a3e; --note:#8a7bb0;
+  --p1:#cf4436; --p2:#1f6f5c; --p3:#c8702c; --p4:#9a9080;
+  --red:#cf4436; --shadow:0 1px 2px rgba(42,38,32,.06),0 8px 24px -12px rgba(42,38,32,.18);
+  --radius:14px; --radius-sm:10px;
+  --sans:"Noto Sans Thai","Albert Sans",system-ui,sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans); color:var(--ink); background:var(--paper);
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 1px 1px,rgba(120,108,86,.05) 1px,transparent 0);
+  background-size:22px 22px;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:20px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);background-clip:content-box}
+
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-columns:230px 1fr;height:100vh;overflow:hidden}
+.sidebar{
+  background:var(--surface); border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:20px 14px;gap:6px;overflow-y:auto;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+.brand .mark{
+  width:34px;height:34px;border-radius:9px;background:var(--accent);
+  display:grid;place-items:center;color:#fff;flex-shrink:0;
+  box-shadow:0 4px 10px -3px rgba(31,111,92,.5);
+}
+.brand .mark svg{width:19px;height:19px}
+.brand h1{font-family:var(--serif);font-size:18px;font-weight:600;line-height:1.05;letter-spacing:-.01em}
+.brand h1 span{display:block;font-size:11px;font-weight:500;color:var(--ink-faint);font-family:var(--sans);letter-spacing:.02em}
+
+.nav-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);padding:14px 10px 4px}
+.nav-btn{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--radius-sm);
+  color:var(--ink-soft);font-weight:500;font-size:14px;width:100%;text-align:left;transition:.13s;
+}
+.nav-btn svg{width:18px;height:18px;flex-shrink:0;opacity:.85}
+.nav-btn:hover{background:var(--surface-2);color:var(--ink)}
+.nav-btn.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px -4px rgba(31,111,92,.45)}
+.nav-btn.active svg{opacity:1}
+.nav-btn .count{margin-left:auto;font-size:11px;background:rgba(0,0,0,.07);padding:1px 7px;border-radius:20px;font-weight:600}
+.nav-btn.active .count{background:rgba(255,255,255,.22)}
+
+.cal-legend{margin-top:auto;padding:14px 10px 4px}
+.cal-legend .leg{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px;color:var(--ink-soft)}
+.dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* ---------- Main ---------- */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:14px 26px;
+  border-bottom:1px solid var(--line);background:rgba(251,249,242,.8);backdrop-filter:blur(8px);
+}
+.topbar h2{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.015em}
+.search-wrap{position:relative;margin-left:auto;width:260px;max-width:34vw}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-faint)}
+.search-wrap input{
+  width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line-strong);border-radius:30px;
+  background:var(--surface);transition:.15s;
+}
+.search-wrap input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.icon-btn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--ink-soft);border:1px solid var(--line-strong);background:var(--surface);transition:.13s;flex-shrink:0}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--ink-faint)}
+.icon-btn svg{width:18px;height:18px}
+.icon-btn.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-add{
+  display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--accent);color:#fff;
+  border-radius:30px;font-weight:600;font-size:14px;box-shadow:0 4px 12px -3px rgba(31,111,92,.5);transition:.13s;flex-shrink:0;
+}
+.btn-add:hover{background:var(--accent-d);transform:translateY(-1px)}
+.btn-add svg{width:17px;height:17px}
+
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-faint);flex-shrink:0}
+.sync .s-dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint)}
+.sync.ok .s-dot{background:var(--family)}
+.sync.err .s-dot{background:var(--red)}
+.sync.busy .s-dot{background:var(--warm);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+.content{flex:1;overflow-y:auto;padding:26px}
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- Dashboard ---------- */
+.dash-hi{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.02em;margin-bottom:3px}
+.dash-sub{color:var(--ink-soft);margin-bottom:24px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.stat .num{font-family:var(--serif);font-size:34px;font-weight:600;line-height:1}
+.stat .lbl{font-size:13px;color:var(--ink-soft);margin-top:5px}
+.stat .ic{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center}
+.stat .ic svg{width:16px;height:16px}
+.dash-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.panel-h h3{font-family:var(--serif);font-size:17px;font-weight:600}
+.panel-h .small{font-size:12px;color:var(--ink-faint)}
+.panel-body{padding:8px 10px 12px}
+
+.row-item{display:flex;align-items:flex-start;gap:11px;padding:10px 10px;border-radius:var(--radius-sm);transition:.1s;cursor:pointer}
+.row-item:hover{background:var(--surface-2)}
+.check{width:19px;height:19px;border-radius:6px;border:2px solid var(--line-strong);flex-shrink:0;margin-top:1px;display:grid;place-items:center;transition:.12s;background:#fff}
+.check svg{width:12px;height:12px;color:#fff;opacity:0}
+.check.done{background:var(--accent);border-color:var(--accent)}
+.check.done svg{opacity:1}
+.row-main{flex:1;min-width:0}
+.row-title{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-title.done{text-decoration:line-through;color:var(--ink-faint)}
+.row-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-faint);margin-top:3px;flex-wrap:wrap}
+.tag{font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.pri-pill{font-size:10.5px;padding:1px 7px;border-radius:5px;font-weight:700;color:#fff}
+.empty{text-align:center;padding:30px 16px;color:var(--ink-faint);font-size:13px}
+.empty svg{width:30px;height:30px;opacity:.4;margin-bottom:8px}
+
+/* ---------- Calendar ---------- */
+.cal-bar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:4px}
+.cal-title{font-family:var(--serif);font-size:22px;font-weight:600;min-width:190px}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{padding:6px 15px;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink-soft);transition:.12s}
+.seg button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.btn-today{padding:7px 14px;border:1px solid var(--line-strong);border-radius:9px;font-weight:600;font-size:13px;background:var(--surface)}
+.btn-today:hover{background:var(--surface-2)}
+
+.cal-grid{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);background:var(--surface-2)}
+.cal-dow div{padding:9px;text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em}
+.cal-month{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(104px,1fr)}
+.cal-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;cursor:pointer;transition:.1s;overflow:hidden;position:relative}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell:hover{background:var(--surface-2)}
+.cal-cell.other{background:var(--surface-2);opacity:.55}
+.cal-cell .dn{font-size:13px;font-weight:600;width:25px;height:25px;display:grid;place-items:center;border-radius:50%;color:var(--ink-soft)}
+.cal-cell.today .dn{background:var(--accent);color:#fff}
+.cal-ev{font-size:11px;padding:2px 6px;border-radius:5px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;border-left:3px solid}
+.cal-more{font-size:10.5px;color:var(--ink-faint);padding:2px 6px;font-weight:600}
+
+/* week/day */
+.cal-week{display:grid;grid-template-columns:54px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.wk-head{display:grid;grid-template-columns:repeat(var(--cols,7),1fr);border-bottom:1px solid var(--line);grid-column:2}
+.wk-head div{padding:9px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--ink-soft);border-left:1px solid var(--line)}
+.wk-head .wd-num{font-family:var(--serif);font-size:18px;color:var(--ink);display:block}
+.wk-head .wd-num.today{color:var(--accent)}
+.wk-times{grid-column:1;border-right:1px solid var(--line)}
+.wk-time{height:46px;font-size:10.5px;color:var(--ink-faint);text-align:right;padding:2px 6px 0 0;position:relative;top:-7px}
+.wk-body{grid-column:2;display:grid;grid-template-columns:repeat(var(--cols,7),1fr);position:relative}
+.wk-col{border-left:1px solid var(--line);position:relative}
+.wk-hr{height:46px;border-bottom:1px solid var(--line);cursor:pointer}
+.wk-hr:hover{background:var(--surface-2)}
+.wk-ev{position:absolute;left:3px;right:3px;border-radius:6px;padding:3px 6px;font-size:11px;font-weight:600;color:#fff;overflow:hidden;cursor:pointer;border-left:3px solid rgba(0,0,0,.2)}
+
+/* ---------- To-Do ---------- */
+.todo-bar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.chip{padding:7px 14px;border:1px solid var(--line-strong);border-radius:30px;font-size:13px;font-weight:500;color:var(--ink-soft);background:var(--surface);transition:.12s}
+.chip:hover{border-color:var(--ink-faint)}
+.chip.active{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.todo-group{margin-bottom:22px}
+.todo-group h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;display:flex;align-items:center;gap:8px;padding-left:4px}
+.todo-group h4 .bar{width:4px;height:14px;border-radius:3px}
+.todo-list{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.todo-list .row-item{border-bottom:1px solid var(--line);border-radius:0;padding:13px 16px}
+.todo-list .row-item:last-child{border-bottom:none}
+
+/* ---------- Kanban ---------- */
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.kcol{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);min-height:180px;transition:.12s}
+.kcol.drag-over{background:var(--accent-soft);border-color:var(--accent);border-style:dashed}
+.kcol-h{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;font-weight:700;font-size:14px}
+.kcol-h .kdot{width:9px;height:9px;border-radius:50%}
+.kcol-h .kcount{margin-left:auto;font-size:12px;color:var(--ink-faint);background:var(--surface);padding:1px 8px;border-radius:20px}
+.kcol-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:9px;min-height:60px}
+.kcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:grab;transition:.12s}
+.kcard:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.kcard.dragging{opacity:.4}
+.kcard .kt{font-weight:600;font-size:14px;margin-bottom:6px}
+.kcard .kmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* ---------- Eisenhower ---------- */
+.eisen{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;min-height:60vh}
+.quad{border-radius:var(--radius);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;transition:.12s;background:var(--surface)}
+.quad.drag-over{border-style:dashed;border-width:2px}
+.quad-h{font-weight:700;font-size:14px;margin-bottom:3px}
+.quad-d{font-size:11.5px;color:var(--ink-faint);margin-bottom:12px}
+.quad-body{display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto}
+.q1{background:linear-gradient(180deg,#fbecea,var(--surface))}.q1 .quad-h{color:var(--p1)}
+.q2{background:linear-gradient(180deg,#e4f0eb,var(--surface))}.q2 .quad-h{color:var(--p2)}
+.q3{background:linear-gradient(180deg,#f7ead9,var(--surface))}.q3 .quad-h{color:var(--p3)}
+.q4{background:linear-gradient(180deg,#f0eee9,var(--surface))}.q4 .quad-h{color:var(--ink-soft)}
+
+/* ---------- Notes ---------- */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.note-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:.12s;border-top:3px solid var(--note)}
+.note-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px -10px rgba(0,0,0,.25)}
+.note-card .nt{font-family:var(--serif);font-weight:600;font-size:16px;margin-bottom:6px}
+.note-card .nb{font-size:13px;color:var(--ink-soft);white-space:pre-wrap;max-height:120px;overflow:hidden}
+.note-card .nd{font-size:11px;color:var(--ink-faint);margin-top:10px}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(42,38,32,.4);backdrop-filter:blur(3px);display:none;place-items:center;z-index:100;padding:20px}
+.overlay.show{display:grid;animation:fade .15s}
+.modal{background:var(--surface);border-radius:18px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px -15px rgba(0,0,0,.4);animation:pop .2s}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:2}
+.modal-h h3{font-family:var(--serif);font-size:19px;font-weight:600}
+.modal-body{padding:20px 22px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
+.field input[type=text],.field input[type=date],.field input[type=time],.field input[type=datetime-local],.field textarea,.field select{
+  width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface-2);transition:.13s;
+}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
+.field textarea{resize:vertical;min-height:70px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.type-seg,.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{padding:8px 14px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-2);transition:.12s}
+.opt:hover{border-color:var(--ink-faint)}
+.opt.sel{color:#fff}
+.opt.sel[data-c=work]{background:var(--work);border-color:var(--work)}
+.opt.sel[data-c=personal]{background:var(--personal);border-color:var(--personal)}
+.opt.sel[data-c=family]{background:var(--family);border-color:var(--family)}
+.opt.sel[data-c=event]{background:var(--accent);border-color:var(--accent)}
+.opt.sel[data-c=task]{background:var(--accent);border-color:var(--accent)}
+.opt.sel[data-c=note]{background:var(--note);border-color:var(--note)}
+.opt.sel[data-c=p1]{background:var(--p1);border-color:var(--p1)}
+.opt.sel[data-c=p2]{background:var(--p2);border-color:var(--p2)}
+.opt.sel[data-c=p3]{background:var(--p3);border-color:var(--p3)}
+.opt.sel[data-c=p4]{background:var(--p4);border-color:var(--p4)}
+.opt.sel[data-c=todo],.opt.sel[data-c=doing],.opt.sel[data-c=done]{background:var(--ink);border-color:var(--ink)}
+.toggle{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:500}
+.toggle .sw{width:40px;height:23px;border-radius:20px;background:var(--line-strong);position:relative;transition:.15s}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on .sw{background:var(--accent)}
+.toggle.on .sw::after{left:19px}
+
+.chk-list{display:flex;flex-direction:column;gap:6px}
+.chk-row{display:flex;align-items:center;gap:9px}
+.chk-row .check{width:18px;height:18px}
+.chk-row input[type=text]{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);font-size:13px}
+.chk-row .del{color:var(--ink-faint);padding:4px}.chk-row .del:hover{color:var(--red)}
+.add-chk{font-size:13px;color:var(--accent);font-weight:600;padding:6px 0;display:flex;align-items:center;gap:5px}
+
+.modal-foot{display:flex;align-items:center;gap:10px;padding:16px 22px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
+.btn{padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;transition:.13s}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 12px -3px rgba(31,111,92,.5)}
+.btn-primary:hover{background:var(--accent-d)}
+.btn-ghost{color:var(--ink-soft);border:1px solid var(--line-strong)}
+.btn-ghost:hover{background:var(--surface-2)}
+.btn-del{color:var(--red);margin-right:auto}.btn-del:hover{background:#fbecea}
+
+/* setup modal */
+.setup-note{font-size:13px;color:var(--ink-soft);line-height:1.6;background:var(--surface-2);border-radius:10px;padding:13px 15px;margin-bottom:16px;border:1px solid var(--line)}
+.setup-note code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:var(--ink);color:var(--surface);padding:11px 18px;border-radius:30px;font-size:13.5px;font-weight:500;box-shadow:0 10px 30px -8px rgba(0,0,0,.4);animation:toastIn .25s;display:flex;align-items:center;gap:9px}
+.toast.err{background:var(--red)}
+.toast svg{width:16px;height:16px}
+@keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+
+/* loading */
+.loader{position:fixed;inset:0;background:var(--paper);display:grid;place-items:center;z-index:300;transition:opacity .3s}
+.loader.hide{opacity:0;pointer-events:none}
+.loader .ld-mark{width:48px;height:48px;border-radius:13px;background:var(--accent);display:grid;place-items:center;color:#fff;animation:bob 1.4s ease-in-out infinite}
+.loader .ld-mark svg{width:26px;height:26px}
+@keyframes bob{50%{transform:translateY(-8px)}}
+
+.mobile-toggle{display:none}
+@media(max-width:880px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:90;transform:translateX(-100%);transition:.22s;box-shadow:var(--shadow)}
+  .sidebar.open{transform:none}
+  .mobile-toggle{display:grid}
+  .stats{grid-template-columns:1fr 1fr}
+  .dash-grid{grid-template-columns:1fr}
+  .kanban{grid-template-columns:1fr;}
+  .eisen{grid-template-columns:1fr;grid-template-rows:none}
+  .search-wrap{width:auto;flex:1}
+  .topbar h2{font-size:19px}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="ld-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+      <h1>Planner<span>ครอบครัว & งาน</span></h1>
+    </div>
+    <nav id="nav">
+      <div class="nav-label">มุมมอง</div>
+      <button class="nav-btn active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>แดชบอร์ด</button>
+      <button class="nav-btn" data-view="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>ปฏิทิน</button>
+      <button class="nav-btn" data-view="todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>รายการงาน <span class="count" id="c-todo">0</span></button>
+      <button class="nav-btn" data-view="kanban"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="6" height="18"/><rect x="10" y="3" width="6" height="12"/><rect x="17" y="3" width="4" height="8"/></svg>คัมบัง</button>
+      <button class="nav-btn" data-view="eisen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h18M12 3v18"/></svg>เมทริกซ์</button>
+      <button class="nav-btn" data-view="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12l-4 4H4z"/><path d="M14 20v-4h4"/></svg>โน้ต</button>
+    </nav>
+    <div class="cal-legend">
+      <div class="nav-label" style="padding-left:0">ปฏิทิน</div>
+      <div class="leg"><span class="dot" style="background:var(--work)"></span>งาน</div>
+      <div class="leg"><span class="dot" style="background:var(--personal)"></span>ส่วนตัว</div>
+      <div class="leg"><span class="dot" style="background:var(--family)"></span>ครอบครัว</div>
+      <button class="nav-btn" data-view="settings" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>ตั้งค่า</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn mobile-toggle" id="menuBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+      <h2 id="viewTitle">แดชบอร์ด</h2>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="search" placeholder="ค้นหางาน กิจกรรม โน้ต..." autocomplete="off">
+      </div>
+      <div class="sync" id="sync"><span class="s-dot"></span><span id="syncTxt">พร้อม</span></div>
+      <button class="icon-btn" id="refreshBtn" title="รีเฟรช"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+      <button class="btn-add" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>เพิ่ม</button>
+    </header>
+
+    <main class="content" id="content">
+      <!-- Dashboard -->
+      <section class="view active" id="view-dashboard"></section>
+      <!-- Calendar -->
+      <section class="view" id="view-calendar"></section>
+      <!-- Todo -->
+      <section class="view" id="view-todo"></section>
+      <!-- Kanban -->
+      <section class="view" id="view-kanban"></section>
+      <!-- Eisenhower -->
+      <section class="view" id="view-eisen"></section>
+      <!-- Notes -->
+      <section class="view" id="view-notes"></section>
+      <!-- Settings -->
+      <section class="view" id="view-settings"></section>
+    </main>
+  </div>
+</div>
+
+<!-- Item Modal -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="modalTitle">เพิ่มรายการ</h3>
+      <button class="icon-btn" id="closeModal" style="border:none;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>ประเภท</label>
+        <div class="type-seg" id="f-type">
+          <button class="opt sel" data-c="event" data-v="event">📅 กิจกรรม</button>
+          <button class="opt" data-c="task" data-v="task">✓ งาน</button>
+          <button class="opt" data-c="note" data-v="note">📝 โน้ต</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>ชื่อเรื่อง</label>
+        <input type="text" id="f-title" placeholder="เช่น ประชุมทีม, รับลูกที่โรงเรียน...">
+      </div>
+
+      <!-- event fields -->
+      <div id="block-event">
+        <label class="toggle" id="f-allday" style="margin-bottom:14px"><span class="sw"></span> ทั้งวัน (ไม่ระบุเวลา)</label>
+        <div class="field-row">
+          <div class="field"><label>เริ่ม</label><input type="datetime-local" id="f-start"></div>
+          <div class="field"><label>สิ้นสุด</label><input type="datetime-local" id="f-end"></div>
+        </div>
+      </div>
+
+      <!-- task fields -->
+      <div id="block-task" style="display:none">
+        <div class="field"><label>กำหนดส่ง (Deadline)</label><input type="datetime-local" id="f-due"></div>
+        <div class="field">
+          <label>ความสำคัญ (เมทริกซ์ไอเซนฮาวร์)</label>
+          <div class="opts" id="f-pri">
+            <button class="opt sel" data-c="p1" data-v="p1">🔴 ด่วน+สำคัญ</button>
+            <button class="opt" data-c="p2" data-v="p2">🟢 สำคัญ</button>
+            <button class="opt" data-c="p3" data-v="p3">🟠 ด่วน</button>
+            <button class="opt" data-c="p4" data-v="p4">⚪ ทั่วไป</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>สถานะ (คัมบัง)</label>
+          <div class="opts" id="f-status">
+            <button class="opt sel" data-c="todo" data-v="todo">ที่ต้องทำ</button>
+            <button class="opt" data-c="doing" data-v="doing">กำลังทำ</button>
+            <button class="opt" data-c="done" data-v="done">เสร็จแล้ว</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- category (event+task) -->
+      <div class="field" id="block-cat">
+        <label>หมวดหมู่</label>
+        <div class="opts" id="f-cat">
+          <button class="opt sel" data-c="work" data-v="work">งาน</button>
+          <button class="opt" data-c="personal" data-v="personal">ส่วนตัว</button>
+          <button class="opt" data-c="family" data-v="family">ครอบครัว</button>
+        </div>
+      </div>
+
+      <div class="field"><label>รายละเอียด / โน้ต</label><textarea id="f-notes" placeholder="รายละเอียดเพิ่มเติม..."></textarea></div>
+      <div class="field"><label>ป้ายกำกับ (คั่นด้วย , )</label><input type="text" id="f-labels" placeholder="เช่น ด่วน, ลูกค้า A"></div>
+
+      <div class="field" id="block-chk">
+        <label>รายการตรวจสอบ (Checklist)</label>
+        <div class="chk-list" id="f-checklist"></div>
+        <button class="add-chk" id="addChk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg> เพิ่มรายการย่อย</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-del" id="delBtn" style="display:none">ลบ</button>
+      <button class="btn btn-ghost" id="cancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="saveBtn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+/* =================================================================
+   ตั้งค่า URL ของ Google Apps Script
+   - ถ้าจะให้ทุกคนที่เปิดลิงก์เห็นข้อมูลชุดเดียวกัน: ใส่ URL ตรงนี้ก่อน push ขึ้น GitHub
+   - หรือเว้นว่างไว้แล้วใส่ผ่านหน้า "ตั้งค่า" (จะเก็บไว้เฉพาะเครื่องที่ใส่)
+   ================================================================= */
+const SCRIPT_URL = ""; // <-- วาง URL ที่ลงท้ายด้วย /exec ตรงนี้
+
+/* ---------- safe storage (กันพังตอนพรีวิว) ---------- */
+const mem = {};
+const store = {
+  get:k=>{try{return localStorage.getItem(k)}catch(e){return mem[k]??null}},
+  set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){mem[k]=v}}
+};
+
+/* ---------- state ---------- */
+let API = SCRIPT_URL || store.get('planner_url') || "";
+let items = [];
+try{ const c = store.get('planner_cache'); if(c) items = JSON.parse(c); }catch(e){}
+let activeView = 'dashboard';
+let editingId = null;
+let modalType = 'event';
+let calView = 'month';
+let calRef = new Date();
+let todoFilter = 'all';
+let searchQ = '';
+let pollTimer = null;
+
+const CAT = {work:{c:'var(--work)',t:'งาน'},personal:{c:'var(--personal)',t:'ส่วนตัว'},family:{c:'var(--family)',t:'ครอบครัว'}};
+const PRI = {p1:{c:'var(--p1)',t:'ด่วน+สำคัญ'},p2:{c:'var(--p2)',t:'สำคัญ'},p3:{c:'var(--p3)',t:'ด่วน'},p4:{c:'var(--p4)',t:'ทั่วไป'}};
+const STATUS = {todo:'ที่ต้องทำ',doing:'กำลังทำ',done:'เสร็จแล้ว'};
+const VIEW_TITLE = {dashboard:'แดชบอร์ด',calendar:'ปฏิทิน',todo:'รายการงาน',kanban:'บอร์ดคัมบัง',eisen:'เมทริกซ์ไอเซนฮาวร์',notes:'โน้ต',settings:'ตั้งค่า'};
+
+const $ = s=>document.querySelector(s);
+const $$ = s=>document.querySelectorAll(s);
+const el = (tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e};
+const esc = s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- date helpers ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_DOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parseDT(s){if(!s)return null;const d=new Date(s);return isNaN(d)?null:d}
+function sameDay(a,b){return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function fmtTime(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function fmtDate(d){return d.getDate()+' '+TH_MONTHS[d.getMonth()].slice(0,3)}
+function relDay(d){const t=new Date();t.setHours(0,0,0,0);const x=new Date(d);x.setHours(0,0,0,0);const diff=Math.round((x-t)/864e5);if(diff===0)return'วันนี้';if(diff===1)return'พรุ่งนี้';if(diff===-1)return'เมื่อวาน';if(diff>1&&diff<7)return'อีก '+diff+' วัน';if(diff<0)return'เลยมา '+(-diff)+' วัน';return fmtDate(d)}
+
+/* =================================================================
+   API LAYER  (optimistic update + ซิงค์เบื้องหลัง)
+   ================================================================= */
+function setSync(state,txt){const s=$('#sync');s.className='sync '+state;$('#syncTxt').textContent=txt}
+function cacheLocal(){try{store.set('planner_cache',JSON.stringify(items))}catch(e){}}
+
+async function apiGet(){
+  if(!API) return;
+  const r = await fetch(API,{method:'GET'});
+  const data = await r.json();
+  if(data.ok) return data.items||[];
+  throw new Error(data.error||'load failed');
+}
+async function apiPost(payload){
+  if(!API) throw new Error('ยังไม่ได้ตั้งค่า URL');
+  const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  const data = await r.json();
+  if(!data.ok) throw new Error(data.error||'save failed');
+  return data;
+}
+
+async function loadAll(showSpin){
+  if(!API){renderAll();return}
+  if(showSpin){setSync('busy','กำลังโหลด...');$('#refreshBtn').classList.add('spin')}
+  try{
+    const fresh = await apiGet();
+    if(fresh){
+      // normalize boolean-ish
+      fresh.forEach(it=>{it.allDay=(it.allDay===true||it.allDay==='true'||it.allDay==='TRUE');it.completed=(it.completed===true||it.completed==='true'||it.completed==='TRUE')});
+      items = fresh; cacheLocal(); renderAll();
+    }
+    setSync('ok','ซิงค์แล้ว · '+fmtTime(new Date()));
+  }catch(e){
+    setSync('err','เชื่อมต่อไม่ได้');
+  }finally{$('#refreshBtn').classList.remove('spin')}
+}
+
+async function saveItem(item){
+  const isNew = !item.id;
+  if(isNew){
+    item.id='tmp_'+Date.now()+'_'+Math.floor(Math.random()*1e5);
+    item.createdAt=new Date().toISOString();
+  }
+  item.updatedAt=new Date().toISOString();
+  // optimistic
+  const idx=items.findIndex(x=>x.id===item.id);
+  if(idx>=0) items[idx]=item; else items.push(item);
+  cacheLocal(); renderAll();
+  if(!API){toast('บันทึกในเครื่องแล้ว (ยังไม่ได้ตั้งค่า Google Sheet)');return}
+  setSync('busy','กำลังบันทึก...');
+  try{
+    const res=await apiPost({action:isNew?'create':'update',item});
+    if(res.item && res.item.id && res.item.id!==item.id){
+      // server gave a real id -> swap
+      const i=items.findIndex(x=>x.id===item.id); if(i>=0) items[i].id=res.item.id; cacheLocal();
+    }
+    setSync('ok','บันทึกแล้ว');
+  }catch(e){setSync('err','บันทึกไม่สำเร็จ');toast('บันทึกขึ้นคลาวด์ไม่สำเร็จ: '+e.message,true)}
+}
+
+async function removeItem(id){
+  items=items.filter(x=>x.id!==id); cacheLocal(); renderAll();
+  if(!API)return;
+  setSync('busy','กำลังลบ...');
+  try{await apiPost({action:'delete',id});setSync('ok','ลบแล้ว')}
+  catch(e){setSync('err','ลบไม่สำเร็จ');toast('ลบบนคลาวด์ไม่สำเร็จ',true)}
+}
+
+async function toggleComplete(item){
+  item.completed=!item.completed;
+  item.status=item.completed?'done':(item.status==='done'?'todo':item.status||'todo');
+  await saveItem(item);
+}
+
+/* =================================================================
+   RENDER
+   ================================================================= */
+function renderAll(){
+  updateCounts();
+  if(activeView==='dashboard')renderDashboard();
+  else if(activeView==='calendar')renderCalendar();
+  else if(activeView==='todo')renderTodo();
+  else if(activeView==='kanban')renderKanban();
+  else if(activeView==='eisen')renderEisen();
+  else if(activeView==='notes')renderNotes();
+  else if(activeView==='settings')renderSettings();
+}
+function tasks(){return items.filter(i=>i.type==='task')}
+function events(){return items.filter(i=>i.type==='event')}
+function notes(){return items.filter(i=>i.type==='note')}
+function updateCounts(){
+  const open=tasks().filter(t=>!t.completed).length;
+  $('#c-todo').textContent=open;
+}
+
+function priPill(p){p=p||'p4';return `<span class="pri-pill" style="background:${PRI[p].c}">${PRI[p].t}</span>`}
+function catTag(c){if(!c||!CAT[c])return'';return `<span class="tag" style="background:${CAT[c].c}1f;color:${CAT[c].c}"><span class="dot" style="width:7px;height:7px;background:${CAT[c].c}"></span>${CAT[c].t}</span>`}
+function labelTags(s){if(!s)return'';return String(s).split(',').map(x=>x.trim()).filter(Boolean).map(x=>`<span class="tag" style="background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)">#${esc(x)}</span>`).join('')}
+
+/* ---------- Dashboard ---------- */
+function renderDashboard(){
+  const v=$('#view-dashboard');
+  const now=new Date();const hr=now.getHours();
+  const greet=hr<12?'สวัสดีตอนเช้า':hr<17?'สวัสดีตอนบ่าย':'สวัสดีตอนเย็น';
+  const open=tasks().filter(t=>!t.completed);
+  const dueToday=open.filter(t=>{const d=parseDT(t.due);return d&&sameDay(d,now)});
+  const overdue=open.filter(t=>{const d=parseDT(t.due);return d&&d<now&&!sameDay(d,now)});
+  const weekAgo=new Date(now);weekAgo.setDate(now.getDate()-7);
+  const doneWeek=tasks().filter(t=>t.completed&&parseDT(t.updatedAt)>weekAgo).length;
+  const todayEvents=events().filter(e=>{const d=parseDT(e.start);return d&&sameDay(d,now)}).sort((a,b)=>parseDT(a.start)-parseDT(b.start));
+  const upcoming=events().filter(e=>{const d=parseDT(e.start);return d&&d>=now}).sort((a,b)=>parseDT(a.start)-parseDT(b.start)).slice(0,5);
+  const topTasks=open.slice().sort((a,b)=>(a.priority||'p4').localeCompare(b.priority||'p4')).slice(0,6);
+
+  v.innerHTML=`
+    <div class="dash-hi">${greet} 👋</div>
+    <div class="dash-sub">${TH_DOW[now.getDay()]==='อา'?'วันอาทิตย์':'วัน'+({จ:'จันทร์',อ:'อังคาร',พ:'พุธ',พฤ:'พฤหัสบดี',ศ:'ศุกร์',ส:'เสาร์'}[TH_DOW[now.getDay()]]||'')} ที่ ${now.getDate()} ${TH_MONTHS[now.getMonth()]} ${now.getFullYear()+543}</div>
+    <div class="stats">
+      <div class="stat"><div class="ic" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="num">${open.length}</div><div class="lbl">งานที่ยังไม่เสร็จ</div></div>
+      <div class="stat"><div class="ic" style="background:var(--warm-soft);color:var(--warm)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="num">${dueToday.length}</div><div class="lbl">ครบกำหนดวันนี้</div></div>
+      <div class="stat"><div class="ic" style="background:#fbecea;color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div class="num" style="color:${overdue.length?'var(--red)':'inherit'}">${overdue.length}</div><div class="lbl">เลยกำหนด</div></div>
+      <div class="stat"><div class="ic" style="background:#e9f3e2;color:var(--family)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div><div class="num">${doneWeek}</div><div class="lbl">เสร็จใน 7 วัน</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="panel">
+        <div class="panel-h"><h3>กำหนดการวันนี้</h3><span class="small">${todayEvents.length} กิจกรรม</span></div>
+        <div class="panel-body" id="dashToday"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>งานสำคัญ</h3><span class="small">เรียงตามความสำคัญ</span></div>
+        <div class="panel-body" id="dashTasks"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-h"><h3>กิจกรรมที่จะถึง</h3></div>
+      <div class="panel-body" id="dashUpcoming"></div>
+    </div>`;
+
+  const dt=$('#dashToday');
+  if(!todayEvents.length)dt.innerHTML=emptyBox('ไม่มีกิจกรรมวันนี้ — วันสบายๆ');
+  else todayEvents.forEach(e=>dt.appendChild(eventRow(e)));
+
+  const dtk=$('#dashTasks');
+  if(!topTasks.length)dtk.innerHTML=emptyBox('ยังไม่มีงานค้าง');
+  else topTasks.forEach(t=>dtk.appendChild(taskRow(t)));
+
+  const du=$('#dashUpcoming');
+  if(!upcoming.length)du.innerHTML=emptyBox('ยังไม่มีกิจกรรมในอนาคต');
+  else upcoming.forEach(e=>du.appendChild(eventRow(e,true)));
+}
+function emptyBox(t){return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div>${t}</div></div>`}
+
+function eventRow(e,showDate){
+  const d=parseDT(e.start);
+  const r=el('div','row-item');
+  const time=e.allDay?'ทั้งวัน':(d?fmtTime(d):'');
+  r.innerHTML=`<div style="width:4px;align-self:stretch;border-radius:3px;background:${(CAT[e.category]||{c:'var(--accent)'}).c}"></div>
+    <div class="row-main"><div class="row-title">${esc(e.title)}</div>
+    <div class="row-meta">${showDate&&d?relDay(d)+' · ':''}${time} ${catTag(e.category)}</div></div>`;
+  r.onclick=()=>openModal(e);return r;
+}
+function taskRow(t){
+  const r=el('div','row-item');
+  const d=parseDT(t.due);
+  const chk=el('div','check'+(t.completed?' done':''),'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 6"/></svg>');
+  chk.onclick=ev=>{ev.stopPropagation();toggleComplete(t)};
+  const main=el('div','row-main');
+  main.innerHTML=`<div class="row-title ${t.completed?'done':''}">${esc(t.title)}</div>
+    <div class="row-meta">${priPill(t.priority)} ${d?'<span'+(d<new Date()&&!t.completed?' style="color:var(--red);font-weight:600"':'')+'>⏰ '+relDay(d)+'</span>':''} ${catTag(t.category)} ${labelTags(t.labels)}</div>`;
+  r.appendChild(chk);r.appendChild(main);
+  r.onclick=()=>openModal(t);return r;
+}
+
+/* ---------- Calendar ---------- */
+function renderCalendar(){
+  const v=$('#view-calendar');
+  let title='';
+  if(calView==='month')title=TH_MONTHS[calRef.getMonth()]+' '+(calRef.getFullYear()+543);
+  else if(calView==='week'){const s=startOfWeek(calRef);const e=new Date(s);e.setDate(s.getDate()+6);title=s.getDate()+' - '+e.getDate()+' '+TH_MONTHS[e.getMonth()].slice(0,3)+' '+(e.getFullYear()+543)}
+  else title=calRef.getDate()+' '+TH_MONTHS[calRef.getMonth()]+' '+(calRef.getFullYear()+543);
+
+  v.innerHTML=`<div class="cal-bar">
+    <div class="cal-nav"><button class="icon-btn" id="calPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="icon-btn" id="calNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button></div>
+    <div class="cal-title">${title}</div>
+    <button class="btn-today" id="calToday">วันนี้</button>
+    <div class="seg" style="margin-left:auto">
+      <button class="${calView==='month'?'active':''}" data-cv="month">เดือน</button>
+      <button class="${calView==='week'?'active':''}" data-cv="week">สัปดาห์</button>
+      <button class="${calView==='day'?'active':''}" data-cv="day">วัน</button>
+    </div></div>
+    <div id="calBody"></div>`;
+  $('#calPrev').onclick=()=>{shiftCal(-1);renderCalendar()};
+  $('#calNext').onclick=()=>{shiftCal(1);renderCalendar()};
+  $('#calToday').onclick=()=>{calRef=new Date();renderCalendar()};
+  $$('.seg [data-cv]').forEach(b=>b.onclick=()=>{calView=b.dataset.cv;renderCalendar()});
+
+  if(calView==='month')renderMonth();else renderWeekDay();
+}
+function shiftCal(dir){if(calView==='month')calRef.setMonth(calRef.getMonth()+dir);else if(calView==='week')calRef.setDate(calRef.getDate()+7*dir);else calRef.setDate(calRef.getDate()+dir)}
+function startOfWeek(d){const x=new Date(d);x.setDate(d.getDate()-d.getDay());x.setHours(0,0,0,0);return x}
+
+function eventsOn(day){return events().filter(e=>{const s=parseDT(e.start);return s&&sameDay(s,day)}).sort((a,b)=>parseDT(a.start)-parseDT(b.start))}
+function tasksOn(day){return tasks().filter(t=>{const d=parseDT(t.due);return d&&sameDay(d,day)})}
+
+function renderMonth(){
+  const body=$('#calBody');
+  const first=new Date(calRef.getFullYear(),calRef.getMonth(),1);
+  const start=new Date(first);start.setDate(1-first.getDay());
+  let html='<div class="cal-grid"><div class="cal-dow">'+TH_DOW.map(d=>'<div>'+d+'</div>').join('')+'</div><div class="cal-month">';
+  const today=new Date();
+  for(let i=0;i<42;i++){
+    const day=new Date(start);day.setDate(start.getDate()+i);
+    const other=day.getMonth()!==calRef.getMonth();
+    const isToday=sameDay(day,today);
+    const evs=eventsOn(day);const tks=tasksOn(day);
+    const all=[...evs.map(e=>({...e,_t:'e'})),...tks.map(t=>({...t,_t:'t'}))];
+    let inner='';
+    all.slice(0,3).forEach(it=>{
+      const col=it._t==='e'?(CAT[it.category]||{c:'var(--accent)'}).c:PRI[it.priority||'p4'].c;
+      const time=it._t==='e'&&!it.allDay&&parseDT(it.start)?fmtTime(parseDT(it.start))+' ':'';
+      inner+=`<div class="cal-ev" style="border-left-color:${col};background:${col}14;color:${col}" data-id="${it.id}">${it._t==='t'?'✓ ':''}${time}${esc(it.title)}</div>`;
+    });
+    if(all.length>3)inner+=`<div class="cal-more">+${all.length-3} เพิ่มเติม</div>`;
+    html+=`<div class="cal-cell ${other?'other':''} ${isToday?'today':''}" data-day="${ymd(day)}"><div class="dn">${day.getDate()}</div>${inner}</div>`;
+  }
+  html+='</div></div>';
+  body.innerHTML=html;
+  $$('.cal-cell').forEach(c=>c.onclick=ev=>{
+    const id=ev.target.closest('.cal-ev')?.dataset.id;
+    if(id){const it=items.find(x=>x.id===id);if(it)openModal(it);return}
+    openModal(null,{date:c.dataset.day});
+  });
+}
+function renderWeekDay(){
+  const body=$('#calBody');
+  const cols=calView==='week'?7:1;
+  const start=calView==='week'?startOfWeek(calRef):new Date(calRef.getFullYear(),calRef.getMonth(),calRef.getDate());
+  const days=[];for(let i=0;i<cols;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(d)}
+  const today=new Date();
+  let head='<div class="wk-head" style="--cols:'+cols+'">';
+  days.forEach(d=>{head+=`<div>${TH_DOW[d.getDay()]}<span class="wd-num ${sameDay(d,today)?'today':''}">${d.getDate()}</span></div>`});
+  head+='</div>';
+  let times='<div class="wk-times">';for(let h=0;h<24;h++)times+=`<div class="wk-time">${pad(h)}:00</div>`;times+='</div>';
+  let bodyCols='<div class="wk-body" style="--cols:'+cols+'">';
+  days.forEach((d,di)=>{
+    bodyCols+='<div class="wk-col" data-di="'+di+'">';
+    for(let h=0;h<24;h++)bodyCols+=`<div class="wk-hr" data-day="${ymd(d)}" data-h="${h}"></div>`;
+    eventsOn(d).forEach(e=>{
+      const s=parseDT(e.start);if(!s)return;
+      const en=parseDT(e.end)||new Date(s.getTime()+36e5);
+      const top=(s.getHours()+s.getMinutes()/60)*46;
+      const h=Math.max(22,((en-s)/36e5)*46);
+      const col=(CAT[e.category]||{c:'var(--accent)'}).c;
+      bodyCols+=`<div class="wk-ev" style="top:${e.allDay?0:top}px;height:${e.allDay?22:h}px;background:${col}" data-id="${e.id}">${e.allDay?'':fmtTime(s)+' '}${esc(e.title)}</div>`;
+    });
+    bodyCols+='</div>';
+  });
+  bodyCols+='</div>';
+  body.innerHTML=`<div class="cal-week" style="--cols:${cols}">${times}${head}${bodyCols}</div>`;
+  $$('.wk-hr').forEach(c=>c.onclick=()=>openModal(null,{date:c.dataset.day,hour:+c.dataset.h}));
+  $$('.wk-ev').forEach(c=>c.onclick=ev=>{ev.stopPropagation();const it=items.find(x=>x.id===c.dataset.id);if(it)openModal(it)});
+  const sc=body.querySelector('.cal-week');if(sc)sc.scrollTop=7*46;
+}
+
+/* ---------- Todo ---------- */
+function renderTodo(){
+  const v=$('#view-todo');
+  v.innerHTML=`<div class="todo-bar">
+    <button class="chip ${todoFilter==='all'?'active':''}" data-f="all">ทั้งหมด</button>
+    <button class="chip ${todoFilter==='work'?'active':''}" data-f="work">งาน</button>
+    <button class="chip ${todoFilter==='personal'?'active':''}" data-f="personal">ส่วนตัว</button>
+    <button class="chip ${todoFilter==='family'?'active':''}" data-f="family">ครอบครัว</button>
+    <button class="chip ${todoFilter==='done'?'active':''}" data-f="done">เสร็จแล้ว</button>
+  </div><div id="todoBody"></div>`;
+  $$('.chip').forEach(c=>c.onclick=()=>{todoFilter=c.dataset.f;renderTodo()});
+  let list=tasks();
+  if(todoFilter==='done')list=list.filter(t=>t.completed);
+  else if(todoFilter==='all')list=list.filter(t=>!t.completed);
+  else list=list.filter(t=>t.category===todoFilter&&!t.completed);
+  if(searchQ)list=list.filter(t=>matchQ(t));
+  const body=$('#todoBody');
+  if(!list.length){body.innerHTML=emptyBox('ไม่มีงานในหมวดนี้ — กด "เพิ่ม" เพื่อสร้างงานใหม่');return}
+  ['p1','p2','p3','p4'].forEach(p=>{
+    const g=list.filter(t=>(t.priority||'p4')===p);
+    if(!g.length)return;
+    const wrap=el('div','todo-group');
+    wrap.innerHTML=`<h4><span class="bar" style="background:${PRI[p].c}"></span>${PRI[p].t} <span style="color:var(--ink-faint);font-weight:500">(${g.length})</span></h4>`;
+    const ul=el('div','todo-list');
+    g.sort((a,b)=>{const da=parseDT(a.due),db=parseDT(b.due);if(da&&db)return da-db;if(da)return -1;if(db)return 1;return 0});
+    g.forEach(t=>ul.appendChild(taskRow(t)));
+    wrap.appendChild(ul);body.appendChild(wrap);
+  });
+}
+
+/* ---------- Kanban ---------- */
+function renderKanban(){
+  const v=$('#view-kanban');
+  const cols=[{k:'todo',t:'ที่ต้องทำ',c:'var(--p3)'},{k:'doing',t:'กำลังทำ',c:'var(--work)'},{k:'done',t:'เสร็จแล้ว',c:'var(--family)'}];
+  v.innerHTML='<div class="kanban">'+cols.map(c=>`
+    <div class="kcol" data-col="${c.k}">
+      <div class="kcol-h"><span class="kdot" style="background:${c.c}"></span>${c.t}<span class="kcount" id="kc-${c.k}">0</span></div>
+      <div class="kcol-body" data-col="${c.k}"></div>
+    </div>`).join('')+'</div>';
+  let list=tasks();if(searchQ)list=list.filter(matchQ);
+  cols.forEach(c=>{
+    const body=v.querySelector('.kcol-body[data-col="'+c.k+'"]');
+    const g=list.filter(t=>(t.status||(t.completed?'done':'todo'))===c.k);
+    v.querySelector('#kc-'+c.k).textContent=g.length;
+    g.forEach(t=>body.appendChild(kanbanCard(t)));
+    const col=v.querySelector('.kcol[data-col="'+c.k+'"]');
+    col.ondragover=e=>{e.preventDefault();col.classList.add('drag-over')};
+    col.ondragleave=()=>col.classList.remove('drag-over');
+    col.ondrop=e=>{e.preventDefault();col.classList.remove('drag-over');const id=e.dataTransfer.getData('id');const t=items.find(x=>x.id===id);if(t){t.status=c.k;t.completed=(c.k==='done');saveItem(t)}};
+  });
+}
+function kanbanCard(t){
+  const card=el('div','kcard');card.draggable=true;
+  const d=parseDT(t.due);
+  card.innerHTML=`<div class="kt">${esc(t.title)}</div><div class="kmeta">${priPill(t.priority)} ${catTag(t.category)} ${d?'<span class="tag" style="background:var(--surface-2);color:var(--ink-soft)">⏰ '+relDay(d)+'</span>':''}</div>
+    ${checklistMini(t)}`;
+  card.ondragstart=e=>{e.dataTransfer.setData('id',t.id);card.classList.add('dragging')};
+  card.ondragend=()=>card.classList.remove('dragging');
+  card.onclick=()=>openModal(t);
+  return card;
+}
+function checklistMini(t){
+  let cl=[];try{cl=JSON.parse(t.checklist||'[]')}catch(e){}
+  if(!cl.length)return'';
+  const done=cl.filter(c=>c.done).length;
+  return `<div style="margin-top:8px;font-size:11px;color:var(--ink-faint)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-2px"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> ${done}/${cl.length}</div>`;
+}
+
+/* ---------- Eisenhower ---------- */
+function renderEisen(){
+  const v=$('#view-eisen');
+  const quads=[
+    {k:'p1',cls:'q1',t:'ทำก่อน',d:'ด่วน & สำคัญ'},
+    {k:'p2',cls:'q2',t:'วางแผนทำ',d:'สำคัญ แต่ไม่ด่วน'},
+    {k:'p3',cls:'q3',t:'มอบหมาย',d:'ด่วน แต่ไม่สำคัญ'},
+    {k:'p4',cls:'q4',t:'ตัดออก',d:'ไม่ด่วน ไม่สำคัญ'}
+  ];
+  v.innerHTML='<div class="eisen">'+quads.map(q=>`
+    <div class="quad ${q.cls}" data-pri="${q.k}">
+      <div class="quad-h">${q.t}</div><div class="quad-d">${q.d}</div>
+      <div class="quad-body" data-pri="${q.k}"></div>
+    </div>`).join('')+'</div>';
+  let list=tasks().filter(t=>!t.completed);if(searchQ)list=list.filter(matchQ);
+  quads.forEach(q=>{
+    const body=v.querySelector('.quad-body[data-pri="'+q.k+'"]');
+    const g=list.filter(t=>(t.priority||'p4')===q.k);
+    if(!g.length)body.innerHTML='<div style="font-size:12px;color:var(--ink-faint);padding:8px">ลากงานมาวางที่นี่</div>';
+    g.forEach(t=>body.appendChild(kanbanCard(t)));
+    const quad=v.querySelector('.quad[data-pri="'+q.k+'"]');
+    quad.ondragover=e=>{e.preventDefault();quad.classList.add('drag-over')};
+    quad.ondragleave=()=>quad.classList.remove('drag-over');
+    quad.ondrop=e=>{e.preventDefault();quad.classList.remove('drag-over');const id=e.dataTransfer.getData('id');const t=items.find(x=>x.id===id);if(t){t.priority=q.k;saveItem(t)}};
+  });
+}
+
+/* ---------- Notes ---------- */
+function renderNotes(){
+  const v=$('#view-notes');
+  let list=notes();if(searchQ)list=list.filter(matchQ);
+  if(!list.length){v.innerHTML=emptyBox('ยังไม่มีโน้ต — กด "เพิ่ม" แล้วเลือกประเภท "โน้ต"');return}
+  v.innerHTML='<div class="notes-grid"></div>';
+  const grid=v.querySelector('.notes-grid');
+  list.sort((a,b)=>parseDT(b.updatedAt)-parseDT(a.updatedAt)).forEach(n=>{
+    const card=el('div','note-card');
+    card.innerHTML=`<div class="nt">${esc(n.title)||'ไม่มีชื่อ'}</div><div class="nb">${esc(n.notes)}</div><div class="nd">${parseDT(n.updatedAt)?relDay(parseDT(n.updatedAt)):''}</div>`;
+    card.onclick=()=>openModal(n);grid.appendChild(card);
+  });
+}
+
+/* ---------- Settings ---------- */
+function renderSettings(){
+  const v=$('#view-settings');
+  v.innerHTML=`<div class="panel" style="max-width:620px">
+    <div class="panel-h"><h3>เชื่อมต่อ Google Sheet</h3></div>
+    <div class="panel-body" style="padding:20px">
+      <div class="setup-note">
+        ใส่ URL ของ Google Apps Script (ลงท้ายด้วย <code>/exec</code>) ที่ได้จากขั้นตอนติดตั้งในไฟล์ README<br>
+        เมื่อใส่แล้ว ข้อมูลทั้งหมดจะถูกเก็บใน Google Sheet และซิงค์ข้ามอุปกรณ์ทันที
+      </div>
+      <div class="field"><label>Apps Script URL</label><input type="text" id="setUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(API)}"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" id="saveUrl">บันทึก & เชื่อมต่อ</button>
+        <button class="btn btn-ghost" id="testUrl">ทดสอบการเชื่อมต่อ</button>
+        <span id="setStatus" style="font-size:13px;color:var(--ink-soft)"></span>
+      </div>
+      ${SCRIPT_URL?'<div class="setup-note" style="margin-top:16px;margin-bottom:0">ℹ️ ไฟล์นี้ฝัง URL ไว้ในโค้ดแล้ว (ทุกคนที่เปิดลิงก์เห็นข้อมูลชุดเดียวกัน)</div>':''}
+      <div style="margin-top:22px;font-size:13px;color:var(--ink-soft);line-height:1.7">
+        <strong>ข้อมูลปัจจุบัน:</strong> ${items.length} รายการ
+        (${events().length} กิจกรรม · ${tasks().length} งาน · ${notes().length} โน้ต)<br>
+        <strong>สถานะ:</strong> ${API?'เชื่อมต่อแล้ว':'ยังไม่ได้เชื่อมต่อ (เก็บในเครื่องชั่วคราว)'}
+      </div>
+    </div></div>`;
+  $('#saveUrl').onclick=()=>{
+    const u=$('#setUrl').value.trim();API=u;store.set('planner_url',u);
+    $('#setStatus').textContent='บันทึกแล้ว กำลังโหลด...';loadAll(true).then(()=>{$('#setStatus').textContent='เชื่อมต่อสำเร็จ ✓';renderSettings();startPolling()});
+  };
+  $('#testUrl').onclick=async()=>{
+    const u=$('#setUrl').value.trim();$('#setStatus').textContent='กำลังทดสอบ...';
+    try{const r=await fetch(u,{method:'GET'});const d=await r.json();$('#setStatus').textContent=d.ok?('สำเร็จ ✓ พบ '+(d.items||[]).length+' รายการ'):('ผิดพลาด: '+d.error)}
+    catch(e){$('#setStatus').textContent='เชื่อมต่อไม่ได้ — ตรวจสอบ URL และสิทธิ์การเข้าถึง'}
+  };
+}
+
+/* =================================================================
+   MODAL
+   ================================================================= */
+let checklistData=[];
+function openModal(item,preset,defType){
+  editingId=item?item.id:null;
+  modalType=item?item.type:(defType||'event');
+  $('#modalTitle').textContent=item?'แก้ไขรายการ':'เพิ่มรายการ';
+  $('#delBtn').style.display=item?'block':'none';
+  // type
+  setSeg('f-type',modalType);
+  $('#f-title').value=item?item.title||'':'';
+  $('#f-notes').value=item?item.notes||'':'';
+  $('#f-labels').value=item?item.labels||'':'';
+  // event
+  const ad=item?!!item.allDay:false;$('#f-allday').classList.toggle('on',ad);
+  let start=item?parseDT(item.start):null,end=item?parseDT(item.end):null;
+  if(!item&&preset){const base=new Date(preset.date+'T00:00');if(preset.hour!=null)base.setHours(preset.hour);else base.setHours(9);start=base;end=new Date(base.getTime()+36e5)}
+  $('#f-start').value=start?toLocalInput(start):'';
+  $('#f-end').value=end?toLocalInput(end):'';
+  // task
+  $('#f-due').value=item&&item.due?toLocalInput(parseDT(item.due)):(preset?.date?toLocalInput(new Date(preset.date+'T17:00')):'');
+  setSeg('f-pri',item?item.priority||'p2':'p2');
+  setSeg('f-status',item?item.status||'todo':'todo');
+  // category
+  setSeg('f-cat',item?item.category||'personal':'personal');
+  // checklist
+  try{checklistData=item&&item.checklist?JSON.parse(item.checklist):[]}catch(e){checklistData=[]}
+  renderChecklist();
+  applyTypeBlocks();
+  $('#modal').classList.add('show');
+  setTimeout(()=>$('#f-title').focus(),50);
+}
+function toLocalInput(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())}
+function setSeg(id,val){$$('#'+id+' .opt').forEach(b=>b.classList.toggle('sel',b.dataset.v===val))}
+function getSeg(id){const s=$('#'+id+' .opt.sel');return s?s.dataset.v:null}
+function applyTypeBlocks(){
+  $('#block-event').style.display=modalType==='event'?'block':'none';
+  $('#block-task').style.display=modalType==='task'?'block':'none';
+  $('#block-cat').style.display=modalType==='note'?'none':'block';
+  $('#block-chk').style.display=modalType==='note'?'none':'block';
+}
+function renderChecklist(){
+  const c=$('#f-checklist');c.innerHTML='';
+  checklistData.forEach((it,i)=>{
+    const row=el('div','chk-row');
+    const chk=el('div','check'+(it.done?' done':''),'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 6"/></svg>');
+    chk.onclick=()=>{checklistData[i].done=!checklistData[i].done;renderChecklist()};
+    const inp=el('input');inp.type='text';inp.value=it.text||'';inp.placeholder='รายการย่อย...';inp.oninput=e=>checklistData[i].text=e.target.value;
+    const del=el('button','del','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M18 6 6 18M6 6l12 12"/></svg>');
+    del.onclick=()=>{checklistData.splice(i,1);renderChecklist()};
+    row.appendChild(chk);row.appendChild(inp);row.appendChild(del);c.appendChild(row);
+  });
+}
+function closeModal(){$('#modal').classList.remove('show')}
+function collectItem(){
+  const it=editingId?{...items.find(x=>x.id===editingId)}:{};
+  it.type=getSeg('f-type');
+  it.title=$('#f-title').value.trim();
+  it.notes=$('#f-notes').value.trim();
+  it.labels=$('#f-labels').value.trim();
+  it.checklist=JSON.stringify(checklistData.filter(c=>c.text&&c.text.trim()));
+  if(it.type==='event'){
+    it.allDay=$('#f-allday').classList.contains('on');
+    it.start=$('#f-start').value?new Date($('#f-start').value).toISOString():'';
+    it.end=$('#f-end').value?new Date($('#f-end').value).toISOString():'';
+    it.category=getSeg('f-cat');it.due='';it.priority='';it.status='';it.completed=false;
+  }else if(it.type==='task'){
+    it.due=$('#f-due').value?new Date($('#f-due').value).toISOString():'';
+    it.priority=getSeg('f-pri');it.status=getSeg('f-status');
+    it.completed=(it.status==='done');
+    it.category=getSeg('f-cat');it.start='';it.end='';it.allDay=false;
+  }else{
+    it.category='';it.start='';it.end='';it.due='';it.priority='';it.status='';it.allDay=false;it.completed=false;
+  }
+  return it;
+}
+
+/* =================================================================
+   SEARCH
+   ================================================================= */
+function matchQ(it){const q=searchQ.toLowerCase();return (it.title||'').toLowerCase().includes(q)||(it.notes||'').toLowerCase().includes(q)||(it.labels||'').toLowerCase().includes(q)}
+
+/* =================================================================
+   TOAST
+   ================================================================= */
+function toast(msg,isErr){
+  const t=el('div','toast'+(isErr?' err':''),`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isErr?'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>':'<path d="M20 6 9 17l-5-5"/>'}</svg>${esc(msg)}`);
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';setTimeout(()=>t.remove(),300)},3200);
+}
+
+/* =================================================================
+   NAVIGATION + EVENTS
+   ================================================================= */
+function switchView(view){
+  activeView=view;
+  $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+view).classList.add('active');
+  $('#viewTitle').textContent=VIEW_TITLE[view];
+  $('#sidebar').classList.remove('open');
+  renderAll();
+}
+
+function bindEvents(){
+  $$('.nav-btn').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+  $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
+  $('#addBtn').onclick=()=>{
+    const def={calendar:'event',todo:'task',kanban:'task',eisen:'task',notes:'note'}[activeView]||'event';
+    openModal(null,null,def);
+  };
+  $('#refreshBtn').onclick=()=>loadAll(true);
+  $('#search').oninput=e=>{searchQ=e.target.value.trim();if(searchQ&&['dashboard'].includes(activeView))switchView('todo');else renderAll()};
+
+  // modal
+  $('#closeModal').onclick=closeModal;$('#cancelBtn').onclick=closeModal;
+  $('#modal').onclick=e=>{if(e.target===$('#modal'))closeModal()};
+  $('#f-type').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{modalType=b.dataset.v;setSeg('f-type',modalType);applyTypeBlocks()});
+  ['f-cat','f-pri','f-status'].forEach(id=>$('#'+id).querySelectorAll('.opt').forEach(b=>b.onclick=()=>setSeg(id,b.dataset.v)));
+  $('#f-allday').onclick=()=>$('#f-allday').classList.toggle('on');
+  $('#addChk').onclick=()=>{checklistData.push({text:'',done:false});renderChecklist()};
+  $('#saveBtn').onclick=()=>{const it=collectItem();if(!it.title){toast('กรุณาใส่ชื่อเรื่อง',true);return}closeModal();saveItem(it)};
+  $('#delBtn').onclick=()=>{if(editingId&&confirm('ลบรายการนี้?')){closeModal();removeItem(editingId)}};
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')closeModal();
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&$('#modal').classList.contains('show')){$('#saveBtn').click()}
+  });
+}
+
+/* ---------- polling ---------- */
+function startPolling(){
+  if(pollTimer)clearInterval(pollTimer);
+  if(!API)return;
+  pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!$('#modal').classList.contains('show'))loadAll(false)},30000);
+}
+
+/* ---------- init ---------- */
+function init(){
+  bindEvents();
+  renderAll();
+  $('#loader').classList.add('hide');
+  if(API){loadAll(true);startPolling()}
+  else{setSync('','ยังไม่เชื่อมต่อ');setTimeout(()=>{switchView('settings');toast('ใส่ URL ของ Google Sheet ในหน้าตั้งค่าก่อนเริ่มใช้งาน')},400)}
+}
+init();
+</script>
+</body>
+</html>
